@@ -1,0 +1,85 @@
+{
+	"info": {
+		"_postman_id": "15c51eed-612a-4e36-b098-38df652747fd",
+		"name": "nbp",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "getTest",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": [
+				{
+					"name": "getTest",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://127.0.0.1:8000/EUR/2013-01-28/2013-01-31/",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "8000",
+							"path": [
+								"EUR",
+								"2013-01-28",
+								"2013-01-31",
+								""
+							]
+						}
+					},
+					"_postman_previewlanguage": null,
+					"header": null,
+					"cookie": [],
+					"body": null
+				}
+			]
+		},
+		{
+			"name": "nbp.pl",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": [
+				{
+					"name": "nbp.pl",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://api.nbp.pl/api/exchangerates/rates/C/EUR/2013-01-01/2013-01-31/",
+							"protocol": "http",
+							"host": [
+								"api",
+								"nbp",
+								"pl"
+							],
+							"path": [
+								"api",
+								"exchangerates",
+								"rates",
+								"C",
+								"EUR",
+								"2013-01-01",
+								"2013-01-31",
+								""
+							]
+						}
+					},
+					"_postman_previewlanguage": null,
+					"header": null,
+					"cookie": [],
+					"body": null
+				}
+			]
+		}
+	]
+}

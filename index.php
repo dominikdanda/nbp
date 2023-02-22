@@ -20,37 +20,80 @@
   [...] Bid – przeliczony kurs kupna waluty (dotyczy tabeli C)
  */
 
+interface CurrencyDataProvider {
+
+	public function getExchangeRates(string $currencyCode, string $startDate, string $endDate): array;
+}
+
+class NbpApiDataProvider implements CurrencyDataProvider {
+
+	public function getExchangeRates(string $currency, string $dateFrom, string $dateTo): array {
+		$curl = curl_init();
+		curl_setopt($curl, CURLOPT_URL, 'http://api.nbp.pl/api/exchangerates/rates/C/' . $currency . '/' . $dateFrom . '/' . $dateTo . '/');
+		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+		$response = curl_exec($curl);
+		curl_close($curl);
+
+		return json_decode($response, true)['rates'] ?? [];
+	}
+
+}
+
+interface CurrencyRateCalculator {
+
+	public function calculateAverageRate(array $exchangeRates): float;
+}
+
+class CurrencyBidRateCalculator implements CurrencyRateCalculator {
+
+	public function calculateAverageRate(array $exchangeRates): float {
+		$sum = 0.0;
+		foreach ($exchangeRates as $rate) {
+			$sum += $rate['bid'] ?? 0.0;
+		}
+
+		return count($exchangeRates) > 0 ? $sum / count($exchangeRates) : 0.0;
+	}
+
+}
+
+class CurrencyRateService {
+
+	private $dataProvider;
+	private $rateCalculator;
+
+	public function __construct(CurrencyDataProvider $dataProvider, CurrencyRateCalculator $rateCalculator) {
+		$this->dataProvider = $dataProvider;
+		$this->rateCalculator = $rateCalculator;
+	}
+
+	public function getAverageBidRate(string $currencyCode, string $startDate, string $endDate): float {
+		$exchangeRates = $this->dataProvider->getExchangeRates($currencyCode, $startDate, $endDate);
+
+		return $this->rateCalculator->calculateAverageRate($exchangeRates);
+	}
+
+}
 
 $supportedCurrencies = ['USD', 'EUR', 'CHF', 'GBP'];
 
-$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$uri = explode('/', $uri);
+$uri = filter_input(INPUT_SERVER, 'REQUEST_URI', FILTER_SANITIZE_URL);
+$params = explode('/', $uri);
 
-$currency = $uri[1];
-$dateFrom = $uri[2];
-$dateTo = $uri[3];
+$currency = (string) substr($params[1], 0, 3);
+$dateFrom = (string) substr($params[2], 0, 10);
+$dateTo = (string) substr($params[3], 0, 10);
 
 if (!in_array($currency, $supportedCurrencies)) {
 	exit('Unsupported Currency');
 }
 
-// ISO 4217: assigns a three-digit numeric code to each currency
-// ISO 8601: YYYY-MM-DD (YYYYMMDD)
+$currencyDataProvider = new NbpApiDataProvider();
+$currencyRateCalculator = new CurrencyBidRateCalculator();
+$currencyRateService = new CurrencyRateService($currencyDataProvider, $currencyRateCalculator);
 
-$curl = curl_init();
-curl_setopt($curl, CURLOPT_URL, 'http://api.nbp.pl/api/exchangerates/rates/C/'.$currency.'/'.$dateFrom.'/'.$dateTo.'/');
-curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-$response = curl_exec($curl);
-curl_close($curl);
+$averageRate = $currencyRateService->getAverageBidRate($currency, $dateFrom, $dateTo);
 
-$result = json_decode($response);
-
-$sum = 0.0;
-foreach ($result->rates as $row) {
-	$sum += $row->bid;
-}
-
-$avg = $sum / count($result->rates);
-$resp['average_price'] = number_format($avg, 4, ','); // round($avg, 4); number_format(), cause the task description mentioned output as "4,1505"
+$resp['average_price'] = number_format($averageRate, 4, ','); // round($averageRate, 4); number_format(), cause the task description mentioned output as "4,1505"
 
 print_r(json_encode($resp));

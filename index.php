@@ -20,62 +20,7 @@
   [...] Bid – przeliczony kurs kupna waluty (dotyczy tabeli C)
  */
 
-interface CurrencyDataProvider {
-
-	public function getExchangeRates(string $currencyCode, string $startDate, string $endDate): array;
-}
-
-class NbpApiDataProvider implements CurrencyDataProvider {
-
-	public function getExchangeRates(string $currency, string $dateFrom, string $dateTo): array {
-		$curl = curl_init();
-		curl_setopt($curl, CURLOPT_URL, 'http://api.nbp.pl/api/exchangerates/rates/C/' . $currency . '/' . $dateFrom . '/' . $dateTo . '/');
-		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-		$response = curl_exec($curl);
-		curl_close($curl);
-
-		return json_decode($response, true)['rates'] ?? [];
-	}
-
-}
-
-interface CurrencyRateCalculator {
-
-	public function calculateAverageRate(array $exchangeRates): float;
-}
-
-class CurrencyBidRateCalculator implements CurrencyRateCalculator {
-
-	public function calculateAverageRate(array $exchangeRates): float {
-		$sum = 0.0;
-		foreach ($exchangeRates as $rate) {
-			$sum += $rate['bid'] ?? 0.0;
-		}
-
-		return count($exchangeRates) > 0 ? $sum / count($exchangeRates) : 0.0;
-	}
-
-}
-
-class CurrencyRateService {
-
-	private $dataProvider;
-	private $rateCalculator;
-
-	public function __construct(CurrencyDataProvider $dataProvider, CurrencyRateCalculator $rateCalculator) {
-		$this->dataProvider = $dataProvider;
-		$this->rateCalculator = $rateCalculator;
-	}
-
-	public function getAverageBidRate(string $currencyCode, string $startDate, string $endDate): float {
-		$exchangeRates = $this->dataProvider->getExchangeRates($currencyCode, $startDate, $endDate);
-
-		return $this->rateCalculator->calculateAverageRate($exchangeRates);
-	}
-
-}
-
-$supportedCurrencies = ['USD', 'EUR', 'CHF', 'GBP'];
+require './app/bootstrap.php';
 
 $uri = filter_input(INPUT_SERVER, 'REQUEST_URI', FILTER_SANITIZE_URL);
 $params = explode('/', $uri);
@@ -88,8 +33,8 @@ if (!in_array($currency, $supportedCurrencies)) {
 	exit('Unsupported Currency');
 }
 
-$currencyDataProvider = new NbpApiDataProvider();
-$currencyRateCalculator = new CurrencyBidRateCalculator();
+$currencyDataProvider = new CurrencyDataProvider();
+$currencyRateCalculator = new CurrencyRateCalculator();
 $currencyRateService = new CurrencyRateService($currencyDataProvider, $currencyRateCalculator);
 
 $averageRate = $currencyRateService->getAverageBidRate($currency, $dateFrom, $dateTo);

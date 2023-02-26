@@ -26,6 +26,7 @@ Response:
 }
 ```
 
+_Pure PHP, no framework nor package manager_
 
-### run
+### run (Windows)
 > php -S 127.0.0.1:8000 -t ./
